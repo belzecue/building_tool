@@ -1,18 +1,28 @@
+import math
 import bmesh
-import operator
-import functools
-from mathutils import Vector
-from bmesh.types import BMVert
-from collections import defaultdict
 
-from ..rails import create_railing_from_edges, create_railing_from_step_edges
+from mathutils import Vector, Quaternion
+from bmesh.types import BMFace, BMEdge
+
 from ...utils import (
     FaceMap,
+    valid_ngon,
     filter_geom,
+    popup_message,
     add_faces_to_map,
-    inset_face_with_scale_offset,
-    subdivide_face_edges_horizontal,
+    create_face,
+    local_xyz,
+    subdivide_face_vertically,
+    subdivide_edges,
+    sort_faces,
+    sort_edges,
+    sort_verts,
+    filter_parallel_edges,
+    vec_equal,
+    extrude_face,
 )
+
+from ..railing.railing import create_railing
 
 
 def create_stairs(bm, faces, prop):
@@ -21,158 +31,193 @@ def create_stairs(bm, faces, prop):
 
     for f in faces:
         f.select = False
-        f = create_stair_split(bm, f, prop.size_offset)
+        if not valid_ngon(f):
+            popup_message("Stairs creation not supported for non-rectangular n-gon!", "Ngon Error")
+            return False
 
+        f = create_stairs_split(bm, f, prop)
         add_faces_to_map(bm, [f], FaceMap.STAIRS)
 
-        # -- options for railing
-        top_faces = []
-        init_normal = f.normal.copy()
+        normal = f.normal.copy()
+        top_faces = create_steps(bm, f, prop)
 
-        f = create_landing(bm, f, top_faces, prop)
-        create_steps(bm, f, top_faces, prop)
+        if prop.has_railing:
+            add_railing_to_stairs(bm, top_faces, normal, prop)
 
-        if prop.railing:
-            create_stairs_railing(bm, init_normal, top_faces, prop)
+    return True
 
 
-def create_landing(bm, f, top_faces, prop):
-    """ Create stair landing """
+def create_steps(bm, face, prop):
+    """ Create stair steps with landing"""
     if prop.landing:
-        ret_face = extrude_step(bm, f, prop.landing_width)
+        step_widths = [prop.landing_width] + [prop.step_width] * prop.step_count
+    else:
+        step_widths = [prop.step_width] * prop.step_count
 
-        # -- keep reference to top faces for railing
-        faces = {f for e in ret_face.edges for f in e.link_faces if f.normal.z > 0}
-        top_faces.append(list(faces).pop())
+    if prop.bottom == "FILLED":
+        return create_filled_steps(bm, face, step_widths, prop.step_height)
+    elif prop.bottom == "BLOCKED":
+        return create_blocked_steps(bm, face, step_widths, prop.step_height)
+    elif prop.bottom == "SLOPE":
+        return create_slope_steps(bm, face, step_widths, prop.step_height)
 
-        return get_stair_face_from_direction(bm, ret_face, prop)
+
+def create_filled_steps(bm, face, step_widths, step_height):
+    """ Create filled stair steps with landing"""
+
+    normal = face.normal.copy()
+    top_faces = []
+
+    # create steps
+    front_face = face
+    for i, step_width in enumerate(step_widths):
+        if i == 0:
+            front_face, surrounding_faces = extrude_face(bm, front_face, step_width)
+            top_faces.append([f for f in surrounding_faces if vec_equal(f.normal, Vector((0., 0., 1.)))][0])
+        else:
+            bottom_face = list({f for e in front_face.edges for f in e.link_faces if vec_equal(f.normal, Vector((0., 0., -1.)))})[0]
+            top_face, front_face, _ = extrude_step(bm, bottom_face, normal, step_height, step_width)
+            top_faces.append(top_face)
+
+    return top_faces
+
+
+def create_blocked_steps(bm, face, step_widths, step_height):
+    """ Create blocked steps with landing"""
+
+    normal = face.normal.copy()
+    top_faces = []
+
+    # create steps
+    front_face = face
+    for i, step_width in enumerate(step_widths):
+        if i == 0:
+            front_face, surrounding_faces = extrude_face(bm, front_face, step_width)
+            top_faces.append([f for f in surrounding_faces if vec_equal(f.normal, Vector((0., 0., 1.)))][0])
+        else:
+            bottom_face = list({f for e in front_face.edges for f in e.link_faces if vec_equal(f.normal, Vector((0., 0., -1.)))})[0]
+            edges = filter_parallel_edges(bottom_face.edges, normal)
+            widths = [edges[0].calc_length() - step_height, step_height]
+
+            inner_edges = subdivide_edges(bm, edges, normal, widths=widths)
+            bottom_face = sort_faces(list({f for e in inner_edges for f in e.link_faces}), normal)[1]
+
+            top_face, front_face, _ = extrude_step(bm, bottom_face, normal, step_height, step_width)
+            top_faces.append(top_face)
+
+    return top_faces
+
+
+def create_slope_steps(bm, face, step_widths, step_height):
+    """ Create slope steps with landing"""
+
+    normal = face.normal.copy()
+    top_faces = []
+
+    # create steps
+    front_face = face
+    for i, step_width in enumerate(step_widths):
+        if i == 0:
+            front_face, surrounding_faces = extrude_face(bm, front_face, step_width)
+            top_faces.append([f for f in surrounding_faces if vec_equal(f.normal, Vector((0., 0., 1.)))][0])
+        else:
+            bottom_face = list({f for e in front_face.edges for f in e.link_faces if vec_equal(f.normal, Vector((0., 0., -1.)))})[0]
+
+            e1 = sort_edges(bottom_face.edges, normal)[0]
+            edges = filter_parallel_edges(bottom_face.edges, normal)
+            widths = [edges[0].calc_length() - step_height, step_height]
+            inner_edges = subdivide_edges(bm, edges, normal, widths=widths)
+            bottom_face = sort_faces(list({f for e in inner_edges for f in e.link_faces}), normal)[1]
+            e2 = sort_edges(bottom_face.edges, normal)[0]
+
+            top_face, front_face, _ = extrude_step(bm, bottom_face, normal, step_height, step_width)
+            top_faces.append(top_face)
+
+            bmesh.ops.translate(bm, verts=e2.verts, vec=-2*normal*step_width/2)
+            bmesh.ops.remove_doubles(bm, verts=list(e1.verts)+list(e2.verts), dist=0.001)
+
+    return top_faces
+
+
+def extrude_step(bm, face, normal, step_height, step_width):
+    """ Extrude a stair step from previous bottom face
+    """
+    # extrude down
+    n = face.normal.copy()
+    face = bmesh.ops.extrude_discrete_faces(bm, faces=[face]).get("faces")[0]
+    bmesh.ops.translate(bm, vec=n*step_height, verts=face.verts)
+
+    # extrude front
+    front_face = list({f for e in face.edges for f in e.link_faces if vec_equal(f.normal, normal)})[0]
+    front_face, surrounding_faces = extrude_face(bm, front_face, step_width)
+    flat_edges = list({e for f in surrounding_faces for e in f.edges if e.calc_face_angle() < 0.001 and e.calc_face_angle() > -0.001})
+    bmesh.ops.dissolve_edges(bm, edges=flat_edges, use_verts=True)
+    top_face = list({f for e in front_face.edges for f in e.link_faces if vec_equal(f.normal, Vector((0., 0., 1.)))})[0]
+    bottom_face = list({f for e in front_face.edges for f in e.link_faces if vec_equal(f.normal, Vector((0., 0., -1.)))})[0]
+
+    return top_face, front_face, bottom_face
+
+
+def subdivide_next_step(bm, ret_face, remaining, step_height):
+    """ cut the next face step height
+    """
+    return subdivide_face_vertically(bm, ret_face, widths=[remaining*step_height, step_height])[0]
+
+
+def create_stairs_split(bm, face, prop):
+    """Use properties to create face
+    """
+    xyz = local_xyz(face)
+    size = Vector((prop.size_offset.size.x, prop.step_height))
+    f = create_face(bm, size, prop.size_offset.offset, xyz)
+    bmesh.ops.translate(
+        bm, verts=f.verts, vec=face.calc_center_bounds() - face.normal*prop.depth_offset
+    )
+    if not vec_equal(f.normal, face.normal):
+        bmesh.ops.reverse_faces(bm, faces=[f])
     return f
 
 
-def create_steps(bm, f, top_faces, prop):
-    """ Create stair steps """
-    ext_face = f
-    get_z = operator.attrgetter("co.z")
-    fheight = max(f.verts, key=get_z).co.z - min(f.verts, key=get_z).co.z
+def add_railing_to_stairs(bm, top_faces, normal, prop):
+    steps = sort_faces(top_faces, normal)
+    first_step = steps[0]
+    last_step = steps[-1]
 
-    step_size = fheight / (prop.step_count + 1)
-    start_loc = max(f.verts, key=get_z).co.z
-    for i in range(prop.step_count):
-        idx = i + 1 if prop.landing else i
-        offset = start_loc - (step_size * idx)
-        ret_face = subdivide_next_step(bm, ext_face, offset)
-
-        ext_face = extrude_step(bm, ret_face, prop.step_width)
-
-        # -- keep reference to top faces for railing
-        faces = {f for e in ext_face.edges for f in e.link_faces if f.normal.z > 0}
-        top_faces.append(list(faces).pop())
-
-
-def extrude_step(bm, face, step_width):
-    """ Extrude a stair step
-    """
-    n = face.normal
-    ret_face = bmesh.ops.extrude_discrete_faces(bm, faces=[face]).get("faces").pop()
-    bmesh.ops.translate(bm, vec=n * step_width, verts=ret_face.verts)
-    return ret_face
-
-
-def get_stair_face_from_direction(bm, ret_face, prop):
-    """ adjust ret_face based on stair direction
-    """
-    faces = list({f for e in ret_face.edges for f in e.link_faces})
-    left_normal, right_normal = (
-        ret_face.normal.cross(Vector((0, 0, 1))),
-        ret_face.normal.cross(Vector((0, 0, -1))),
-    )
-
-    def flt(f, normal):
-        return f.normal.to_tuple(4) == normal.to_tuple(4)
-
-    left = next(filter(lambda f: flt(f, left_normal), faces))
-    right = next(filter(lambda f: flt(f, right_normal), faces))
-
-    return {"LEFT": left, "RIGHT": right}.get(prop.stair_direction, ret_face)
-
-
-def subdivide_next_step(bm, ret_face, offset):
-    """ cut the next face step height
-    """
-    res = subdivide_face_edges_horizontal(bm, ret_face, cuts=1)
-    verts = filter_geom(res["geom_inner"], BMVert)
-    for v in verts:
-        v.co.z = offset
-    return min(verts.pop().link_faces, key=lambda f: f.calc_center_median().z)
-
-
-def create_stair_split(bm, face, prop):
-    """Use properties from SplitOffset to subdivide face into regular quads
-    """
-    size, off = prop.size, prop.offset
-    return inset_face_with_scale_offset(bm, face, size.y, size.x, off.x, off.y, off.z)
-
-
-def create_stairs_railing(bm, normal, faces, prop):
-    """Create railing for stairs
-    """
-    # -- create railing for landing
+    # create railing initial edges
     if prop.landing:
-        landing_face = faces.pop(0)
-        directions = set(["FRONT", "LEFT", "RIGHT"]) - set([prop.stair_direction])
-        edges = edges_from_direction(landing_face, normal, directions)
-        create_railing_from_edges(bm, edges, prop.rail)
-
+        v1, v2 = railing_verts(bm, sort_verts(first_step.verts, normal)[:2], normal, prop.rail.offset, prop.rail.corner_post_width/2)
+        v3, v4 = railing_verts(bm, sort_verts(first_step.verts, normal)[-2:], normal, prop.rail.offset, -prop.step_width/2)
+        v5, v6 = railing_verts(bm, sort_verts(last_step.verts, normal)[:2], normal, prop.rail.offset, prop.step_width/2)
+        e1 = bmesh.ops.contextual_create(bm, geom=(v1, v3))["edges"][0]
+        e2 = bmesh.ops.contextual_create(bm, geom=[v3, v5])["edges"][0]
+        e3 = bmesh.ops.contextual_create(bm, geom=[v2, v4])["edges"][0]
+        e4 = bmesh.ops.contextual_create(bm, geom=[v4, v6])["edges"][0]
+        railing_edges = [e1, e2, e3, e4]
     else:
-        # -- ensure direction is front if there is no landing
-        prop.stair_direction = "FRONT"
+        v1, v2 = railing_verts(bm, sort_verts(first_step.verts, normal)[:2], normal, prop.rail.offset, prop.step_width/2)
+        v3, v4 = railing_verts(bm, sort_verts(last_step.verts, normal)[:2], normal, prop.rail.offset, prop.step_width/2)
+        e1 = bmesh.ops.contextual_create(bm, geom=(v1, v3))["edges"][0]
+        e2 = bmesh.ops.contextual_create(bm, geom=[v2, v4])["edges"][0]
+        railing_edges = [e1, e2]
 
-    # --create railing for steps
-    create_step_railing(bm, normal, faces, prop)
+    # extrude edges
+    ret = bmesh.ops.extrude_edge_only(bm, edges=railing_edges)
+    top_edges = filter_geom(ret["geom"], BMEdge)
+    top_verts = list({v for e in top_edges for v in e.verts})
+    bmesh.ops.translate(bm, verts=top_verts, vec=Vector((0., 0., 1.))*prop.rail.corner_post_height)
+    railing_faces = filter_geom(ret["geom"], BMFace)
 
-
-def create_step_railing(bm, normal, faces, prop):
-    """Create railing for stair steps
-    """
-
-    # -- update normal based on stair direction
-    if prop.stair_direction == "LEFT":
-        normal = normal.cross(Vector((0, 0, 1)))
-    elif prop.stair_direction == "RIGHT":
-        normal = normal.cross(Vector((0, 0, -1)))
-
-    # -- get all left and right edges
-    left_edges, right_edges = [], []
-    for face in faces:
-        EDGES = functools.partial(edges_from_direction, face, normal)
-        left_edges.extend(EDGES(["LEFT"]))
-        right_edges.extend(EDGES(["RIGHT"]))
-
-    # -- filter edges based on direction
-    valid_edges = {
-        "LEFT": right_edges,
-        "RIGHT": left_edges,
-        "FRONT": left_edges + right_edges,
-    }.get(prop.stair_direction)
-    create_railing_from_step_edges(bm, valid_edges, normal, prop)
+    create_railing(bm, railing_faces, prop.rail, normal)
 
 
-def edges_from_direction(face, normal, direction):
-    edges = defaultdict(list)
-    edges.fromkeys(["FRONT", "LEFT", "RIGHT"])
-
-    valid_loops = [l for l in face.loops]
-    for e in face.edges:
-        for loop in e.link_loops:
-            if loop in valid_loops:
-                tan = e.calc_tangent(loop)
-                if tan.to_tuple(2) == (-normal).to_tuple(2):
-                    edges["FRONT"].append(e)
-
-                if round(normal.cross(tan).z) < 0:
-                    edges["RIGHT"].append(e)
-
-                if round(normal.cross(tan).z) > 0:
-                    edges["LEFT"].append(e)
-
-    return sum([edges[d] for d in list(direction)], [])
+def railing_verts(bm, verts, normal, offset, depth):
+    tangent = normal.copy()
+    tangent.rotate(Quaternion(Vector((0., 0., 1.)), math.pi/2).to_euler())
+    verts = sort_verts(verts, tangent)
+    co1 = verts[0].co + depth * normal
+    co2 = verts[1].co + depth * normal
+    v1 = bmesh.ops.create_vert(bm, co=co1)["vert"][0]
+    v2 = bmesh.ops.create_vert(bm, co=co2)["vert"][0]
+    bmesh.ops.translate(bm, verts=[v1], vec=tangent*offset)
+    bmesh.ops.translate(bm, verts=[v2], vec=-tangent*offset)
+    return v1, v2

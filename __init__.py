@@ -3,8 +3,8 @@ from .core import register_core, unregister_core
 
 bl_info = {
     "name": "Building Tools",
-    "author": "Ian Ichung'wa Karanja (ranjian0)",
-    "version": (0, 9, 6),
+    "author": "Ian Ichung'wa Karanja (ranjian0), Lucky Kadam (luckykadam)",
+    "version": (1, 0, 0),
     "blender": (2, 80, 0),
     "location": "View3D > Toolshelf > Building Tools",
     "description": "Building Creation Tools",
@@ -15,7 +15,7 @@ bl_info = {
 }
 
 
-class PANEL_PT_mesh_tools(bpy.types.Panel):
+class BTOOLS_PT_mesh_tools(bpy.types.Panel):
 
     bl_label = "Mesh Tools"
     bl_space_type = "VIEW_3D"
@@ -29,21 +29,22 @@ class PANEL_PT_mesh_tools(bpy.types.Panel):
         # ``````````````
         col = layout.column(align=True)
         col.operator("btools.add_floorplan")
-        col.operator("btools.add_floors")
+        row = col.row(align=True)
+        row.operator("btools.add_floors")
+        row.operator("btools.add_roof")
 
+        col = layout.column(align=True)
+        col.operator("btools.add_balcony")
+        col.operator("btools.add_stairs")
+
+        col = layout.column(align=True)
         row = col.row(align=True)
         row.operator("btools.add_window")
         row.operator("btools.add_door")
-
-        row = col.row(align=True)
-        row.operator("btools.add_railing")
-        row.operator("btools.add_balcony")
-
-        col.operator("btools.add_stairs")
-        col.operator("btools.add_roof")
+        col.operator("btools.add_multigroup")
 
 
-class PANEL_PT_material_tools(bpy.types.Panel):
+class BTOOLS_PT_material_tools(bpy.types.Panel):
 
     bl_label = "Material Tools"
     bl_space_type = "VIEW_3D"
@@ -92,14 +93,14 @@ class PANEL_PT_material_tools(bpy.types.Panel):
             sub.operator("object.face_map_select", text="Select")
             sub.operator("object.face_map_deselect", text="Deselect")
 
-        layout.label(text="Material")
+        layout.label(text="Active Face Map Material")
         if ob.face_maps:
             face_map_index = ob.face_maps.active_index
             face_map_material = ob.facemap_materials[face_map_index]
             layout.template_ID_preview(face_map_material, "material", hide_buttons=True)
 
 
-classes = (PANEL_PT_mesh_tools, PANEL_PT_material_tools)
+classes = (BTOOLS_PT_mesh_tools, BTOOLS_PT_material_tools)
 
 
 def register():
@@ -116,12 +117,11 @@ def unregister():
 
 if __name__ == "__main__":
     import os
-
     os.system("clear")
 
-    try:
-        unregister()
-    except RuntimeError:
-        pass
-    finally:
-        register()
+    # -- custom unregister for script watcher
+    for tp in dir(bpy.types):
+        if 'BTOOLS_' in tp:
+            bpy.utils.unregister_class(getattr(bpy.types, tp))
+
+    register()

@@ -1,17 +1,17 @@
 import bpy
-from .door import Door
-from .door_props import DoorProperty
+from .multigroup import Multigroup
+from .multigroup_props import MultigroupProperty
 from ...utils import get_selected_face_dimensions
 
 
-class BTOOLS_OT_add_door(bpy.types.Operator):
-    """Create a door from selected faces"""
+class BTOOLS_OT_add_multigroup(bpy.types.Operator):
+    """Create multiple door/window group from selected faces"""
 
-    bl_idname = "btools.add_door"
-    bl_label = "Add Door"
+    bl_idname = "btools.add_multigroup"
+    bl_label = "Add Multigroup"
     bl_options = {"REGISTER", "UNDO"}
 
-    props: bpy.props.PointerProperty(type=DoorProperty)
+    props: bpy.props.PointerProperty(type=MultigroupProperty)
 
     @classmethod
     def poll(cls, context):
@@ -19,7 +19,7 @@ class BTOOLS_OT_add_door(bpy.types.Operator):
 
     def execute(self, context):
         self.props.init(get_selected_face_dimensions(context))
-        return Door.build(context, self.props)
+        return Multigroup.build(context, self.props)
 
     def draw(self, context):
         self.props.draw(context, self.layout)

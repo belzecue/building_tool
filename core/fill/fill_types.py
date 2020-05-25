@@ -20,7 +20,7 @@ class FillUser(Enum):
     WINDOW = auto()
 
 
-@map_new_faces(FaceMap.DOOR_FRAMES, skip=FaceMap.DOOR_PANELS)
+@map_new_faces(FaceMap.FRAME, skip=FaceMap.DOOR_PANELS)
 def fill_panel(bm, face, prop):
     """Create panels on face
     """
@@ -45,13 +45,11 @@ def fill_glass_panes(bm, face, prop, user=FillUser.DOOR):
         return
 
     userframe = FaceMap.DOOR_PANES if user == FillUser.DOOR else FaceMap.WINDOW_PANES
+    bmesh.ops.inset_individual(bm, faces=[face], thickness=0.0001) # to isolate the working quad and not leave adjacent face as n-gon
     quads = subdivide_face_into_quads(bm, face, prop.pane_count_x, prop.pane_count_y)
 
     inset = map_new_faces(userframe)(bmesh.ops.inset_individual)
-    inset(bm, faces=quads, thickness=prop.pane_margin)
-
-    for f in quads:
-        bmesh.ops.translate(bm, verts=f.verts, vec=-f.normal * prop.pane_depth)
+    inset(bm, faces=quads, thickness=prop.pane_margin, depth=-prop.pane_depth)
 
     usergroup = FaceMap.DOOR if user == FillUser.DOOR else FaceMap.WINDOW
     add_faces_to_map(bm, quads, usergroup)
@@ -96,8 +94,7 @@ def fill_louver(bm, face, prop, user=FillUser.DOOR):
     """
     normal = face.normal.copy()
     if prop.louver_margin:
-        uframe = [FaceMap.WINDOW_FRAMES, FaceMap.DOOR_FRAMES][user == FillUser.DOOR]
-        inset = map_new_faces(uframe)(bmesh.ops.inset_individual)
+        inset = map_new_faces(FaceMap.FRAME)(bmesh.ops.inset_individual)
         inset(bm, faces=[face], thickness=prop.louver_margin)
 
     segments = double_and_make_even(prop.louver_count)
@@ -172,7 +169,6 @@ def extrude_faces_add_slope(bm, faces, extrude_normal, extrude_depth):
             key=lambda e: calc_edge_median(e).z,
         )
         bmesh.ops.translate(bm, vec=-face.normal * extrude_depth, verts=top_edge.verts)
-    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=0.01)
 
 
 def subdivide_face_into_vertical_segments(bm, face, segments):

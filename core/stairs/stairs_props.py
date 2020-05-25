@@ -1,18 +1,26 @@
 import bpy
 from bpy.props import (
-    BoolProperty,
     IntProperty,
+    BoolProperty,
     FloatProperty,
-    EnumProperty,
     PointerProperty,
+    EnumProperty,
 )
 
+from ..railing.railing_props import RailProperty
 from ..generic import SizeOffsetProperty
-from ..rails import RailProperty
 
 
 class StairsProperty(bpy.types.PropertyGroup):
     redo: BoolProperty()
+
+    depth_offset: FloatProperty(
+        name="Depth Offset",
+        min=0.0,
+        max=100.0,
+        default=0.0,
+        description="Depth offset of stairs",
+    )
 
     step_count: IntProperty(
         name="Step Count", min=1, max=100, default=3, description="Number of steps"
@@ -22,8 +30,16 @@ class StairsProperty(bpy.types.PropertyGroup):
         name="Step Width",
         min=0.01,
         max=100.0,
-        default=0.5,
+        default=0.2,
         description="Width of each step",
+    )
+
+    step_height: FloatProperty(
+        name="Step Height",
+        min=0.01,
+        max=100.0,
+        default=0.12,
+        description="Height of each step",
     )
 
     landing_width: FloatProperty(
@@ -35,54 +51,63 @@ class StairsProperty(bpy.types.PropertyGroup):
     )
 
     landing: BoolProperty(
-        name="Has Landing", default=True, description="Whether to stairs have a landing"
+        name="Has Landing", default=True, description="Whether the stairs have a landing"
     )
 
-    railing: BoolProperty(
-        name="Has Railing", default=True, description="Whether to stairs have a rails"
-    )
-
-    size_offset: PointerProperty(type=SizeOffsetProperty)
-    rail: PointerProperty(type=RailProperty)
-
-    direction_items = [
-        ("FRONT", "Front", "", 0),
-        ("LEFT", "Left", "", 1),
-        ("RIGHT", "Right", "", 2),
+    bottom_types = [
+        ("FILLED", "Filled", "", 0),
+        ("SLOPE", "Slope", "", 2),
+        ("BLOCKED", "Blocked", "", 1),
     ]
 
-    stair_direction: EnumProperty(
-        name="Stair Direction",
-        items=direction_items,
-        default="FRONT",
-        description="The direction to put the stairs",
+    bottom: EnumProperty(
+        name="Bottom Type",
+        items=bottom_types,
+        default="FILLED",
+        description="Bottom type of stairs",
     )
 
-    def set_defaults(self):
-        """ Helper function to make convinient property adjustments """
-        if self.redo:
-            return
+    has_railing: BoolProperty(
+        name="Add Railing", default=True, description="Whether the stairs have railing"
+    )
 
-        self.size_offset.size = (0.5, 1.0)
-        self.redo = True
+    rail: PointerProperty(type=RailProperty)
+
+    size_offset: PointerProperty(type=SizeOffsetProperty)
+
+    def init(self, wall_dimensions):
+        self['wall_dimensions'] = wall_dimensions
+        self.size_offset.init(
+            (self['wall_dimensions'][0], 0.0),
+            default_size=(1.0, 0.0), default_offset=(0.0, 0.0),
+            restricted=False,
+        )
+        self.rail.init(self.step_width, self.step_count)
 
     def draw(self, context, layout):
         self.size_offset.draw(context, layout)
 
         col = layout.column(align=True)
-        col.prop(self, "step_count")
-        col.prop(self, "step_width")
+        col.prop(self, "depth_offset")
 
-        layout.prop(self, "landing", toggle=True)
+        col = layout.column(align=True)
+        row = col.row(align=True)
+        row.prop(self, "step_count")
+        row = col.row(align=True)
+        row.prop(self, "step_height")
+        row.prop(self, "step_width")
+
+        col = layout.column()
+        col.prop(self, "landing")
         if self.landing:
             box = layout.box()
             col = box.column()
             col.prop(self, "landing_width")
+        
+        col = layout.column()
+        col.prop_menu_enum(self, "bottom", text="Bottom Type")
 
-            row = box.row()
-            row.prop_menu_enum(self, "stair_direction")
-
-        layout.prop(self, "railing", toggle=True)
-        if self.railing:
+        layout.prop(self, "has_railing")
+        if self.has_railing:
             box = layout.box()
             self.rail.draw(context, box)

@@ -1,13 +1,31 @@
-DOOR:
-  re-add double door feature, but better and with support for archs
 
+BALCONY NITPICK FEATURES
+ - have rounded/circular balconies
+ - more robust implementation of corner balcony (current open implementation
+   may not be abvious to users)
 
-BUG:
-    - move_slabface_to_wall prevents splitoffset from working properly
-      (may need to solve this issue the hard way after all)
+- roof is also abit unstable esp hip roof and straight skeleton
+
+SLANTED FACES:
+  Window tool should allow  for slanted faces
+
+NGON VALIDATION AND SOLVE
+  It may be useful to try and provide solution for simple ngon cases.
+
+  For instance, if ngon has two top edges, create a new horizontal edge
+  and slide it to the top. This can be repeated as nessesary for remaining
+  sides until a quad is formed.
+
+  If the ngon for instance has all sides with multiple edges, skip and throw
+  warning.
+
+REMOVE ALL DEAD CODE / UNREACHABLE
+  - part of refactoring
+
 
 ROOF:
     - XXX support gable roof for complex shapes
+    - support adding roofs to faces that have boundary geometry e.g for patio
 
 STAIRS:
     - bridge edge loops to fill gaps caused by sloping
@@ -44,3 +62,22 @@ UI:
 
 #???
     - Circular floorplan doesn't have any real use ??? Remove!
+
+
+FEATURE - LAYOUT
+````````````````
+After version 1.0 release of building tools, begin work on layout tools for
+creating city/town layouts:
+
+Features should include:
+    - road/street networks
+        (randomy generated CIRCULAR/SQUARE) [l-systems] etc
+        with user input (probably a modal operator to add segments and intersections)
+
+    - plot subdivisions
+       after road/street network is created, middle regions make up plots
+       with optional pavements and decorational artifacts like street light/ power lines
+       etc
+
+       buildings can then be added on the plots using the building tools.
+

@@ -17,16 +17,16 @@ class FaceMap(AutoIndex):
     SLABS = auto()
     WALLS = auto()
 
+    FRAME = auto()
+
     WINDOW = auto()
     WINDOW_BARS = auto()
     WINDOW_PANES = auto()
-    WINDOW_FRAMES = auto()
     WINDOW_LOUVERS = auto()
 
     DOOR = auto
     DOOR_PANES = auto()
     DOOR_PANELS = auto()
-    DOOR_FRAMES = auto()
     DOOR_LOUVERS = auto()
 
     STAIRS = auto()
@@ -59,9 +59,7 @@ def map_new_faces(group, skip=None):
             new_faces = set(bm.faces) - faces
             add_faces_to_map(bm, list(new_faces), group, skip)
             return result
-
         return wrapper
-
     return outer
 
 
@@ -82,6 +80,14 @@ def add_faces_to_map(bm, faces, group, skip=None):
 
     for face in list(filter(remove_skipped, faces)):
         face[face_map] = group_index
+
+    # -- if the facemap already has a material assigned, assign the new faces to the material
+    obj = bpy.context.object
+    mat = obj.facemap_materials[group_index].material
+    mat_id = [idx for idx,  m in enumerate(obj.data.materials) if m == mat]
+    if mat_id:
+        for f in faces:
+            f.material_index = mat_id.pop()
 
 
 def add_facemap_for_groups(groups):
