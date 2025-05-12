@@ -17,8 +17,7 @@ class Array:
     @classmethod
     @crash_safe
     def build(cls, context):
-        """ Setup curved array
-        """
+        """Setup curved array"""
 
         # Can't array nothing
         if context.active_object is None:
@@ -61,16 +60,20 @@ class Array:
     def create_curve(cls, context):
         # Create curve
         name = "curve_" + str("{:0>3}".format(len(bpy.data.objects) + 1))
-        curve_data = bpy.data.curves.new(name=name, type='CURVE')
-        curve_data.dimensions = '3D'
+        curve_data = bpy.data.curves.new(name=name, type="CURVE")
+        curve_data.dimensions = "3D"
         curve_data.resolution_u = 500
-        spline = curve_data.splines.new(type='BEZIER')
+        spline = curve_data.splines.new(type="BEZIER")
 
         # Add point
         spline.bezier_points.add(1)
         spline.bezier_points[1].co = (0, 10, 0)
-        spline.bezier_points[0].handle_left_type = spline.bezier_points[0].handle_right_type = "AUTO"
-        spline.bezier_points[1].handle_left_type = spline.bezier_points[1].handle_right_type = "AUTO"
+        spline.bezier_points[0].handle_left_type = spline.bezier_points[
+            0
+        ].handle_right_type = "AUTO"
+        spline.bezier_points[1].handle_left_type = spline.bezier_points[
+            1
+        ].handle_right_type = "AUTO"
 
         # Add to scene
         curve_obj = bpy.data.objects.new(name=name, object_data=curve_data)
@@ -86,7 +89,11 @@ class Array:
         obj = create_object(name, create_mesh(name + "_mesh"))
         bm = bm_from_obj(obj)
 
-        plane(bm, context.active_object.dimensions.y / 2, context.active_object.dimensions.x / 2)
+        plane(
+            bm,
+            context.active_object.dimensions.y / 2,
+            context.active_object.dimensions.x / 2,
+        )
 
         bm_to_obj(bm, obj)
         link_obj(obj)
@@ -118,8 +125,7 @@ class Array:
 
 
 class BTOOLS_OT_add_array(bpy.types.Operator):
-    """Setup array
-    """
+    """Setup array"""
 
     bl_idname = "btools.add_array"
     bl_label = "Add Array"
@@ -135,8 +141,7 @@ class BTOOLS_OT_add_array(bpy.types.Operator):
 
 
 class BTOOLS_OT_finalize_array(bpy.types.Operator):
-    """Apply modifiers, remove curve and remove plane
-    """
+    """Apply modifiers, remove curve and remove plane"""
 
     bl_idname = "btools.finalize_array"
     bl_label = "Finalize Array"

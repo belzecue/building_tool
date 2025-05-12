@@ -1,13 +1,14 @@
 import bpy
 from bpy.props import FloatProperty, EnumProperty, BoolProperty, PointerProperty
+from ...utils import get_scaled_unit
 
 
 class PostFillProperty(bpy.types.PropertyGroup):
     size: FloatProperty(
         name="Size",
-        min=0.01,
-        max=100.0,
-        default=0.05,
+        min=get_scaled_unit(0.01),
+        max=get_scaled_unit(100.0),
+        default=get_scaled_unit(0.05),
         unit="LENGTH",
         description="Size of each post",
     )
@@ -29,9 +30,9 @@ class PostFillProperty(bpy.types.PropertyGroup):
 class RailFillProperty(bpy.types.PropertyGroup):
     size: FloatProperty(
         name="Rail Size",
-        min=0.01,
-        max=100.0,
-        default=0.05,
+        min=get_scaled_unit(0.01),
+        max=get_scaled_unit(100.0),
+        default=get_scaled_unit(0.05),
         unit="LENGTH",
         description="Size of each rail",
     )
@@ -53,9 +54,9 @@ class RailFillProperty(bpy.types.PropertyGroup):
 class WallFillProperty(bpy.types.PropertyGroup):
     width: FloatProperty(
         name="Wall Width",
-        min=0.0,
-        max=100.0,
-        default=0.075,
+        min=get_scaled_unit(0.0),
+        max=get_scaled_unit(100.0),
+        default=get_scaled_unit(0.075),
         unit="LENGTH",
         description="Width of each wall",
     )
@@ -66,7 +67,6 @@ class WallFillProperty(bpy.types.PropertyGroup):
 
 
 class RailProperty(bpy.types.PropertyGroup):
-
     fill_types = [
         ("POSTS", "Posts", "", 0),
         ("RAILS", "Rails", "", 1),
@@ -82,18 +82,18 @@ class RailProperty(bpy.types.PropertyGroup):
 
     corner_post_width: FloatProperty(
         name="Width",
-        min=0.01,
-        max=100.0,
-        default=0.1,
+        min=get_scaled_unit(0.01),
+        max=get_scaled_unit(100.0),
+        default=get_scaled_unit(0.1),
         unit="LENGTH",
         description="Width of each corner post",
     )
 
     corner_post_height: FloatProperty(
         name="Height",
-        min=0.01,
-        max=100.0,
-        default=0.7,
+        min=get_scaled_unit(0.01),
+        max=get_scaled_unit(100.0),
+        default=get_scaled_unit(0.7),
         unit="LENGTH",
         description="Height of each corner post",
     )
@@ -106,7 +106,7 @@ class RailProperty(bpy.types.PropertyGroup):
 
     offset: FloatProperty(
         name="Offset",
-        default=0.05,
+        default=get_scaled_unit(0.05),
         unit="LENGTH",
         description="Railings offset",
     )
@@ -122,9 +122,9 @@ class RailProperty(bpy.types.PropertyGroup):
     )
     bottom_rail_offset: FloatProperty(
         name="Rail Offset",
-        min=-1.0,
-        max=1.0,
-        default=0.0,
+        min=get_scaled_unit(-1.0),
+        max=get_scaled_unit(1.0),
+        default=get_scaled_unit(0.0),
         unit="LENGTH",
         description="Offset of the bottom rail",
     )
@@ -136,11 +136,9 @@ class RailProperty(bpy.types.PropertyGroup):
         row = layout.row()
         row.prop_menu_enum(self, "fill", text=self.fill.title())
 
-        {
-            "POSTS" : self.post_fill,
-            "RAILS" : self.rail_fill,
-            "WALL"  : self.wall_fill
-        }.get(self.fill).draw(context, layout)
+        {"POSTS": self.post_fill, "RAILS": self.rail_fill, "WALL": self.wall_fill}.get(
+            self.fill
+        ).draw(context, layout)
 
         if self.fill in ["POSTS", "WALL"] and self.show_extra_props:
             row = layout.row(align=True)

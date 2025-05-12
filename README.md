@@ -29,26 +29,27 @@ and `Building Tools` was born.
 
 ## Installation
 
-1. Download add-on (zipped) from this [link](https://github.com/ranjian0/building_tools/releases/download/v1.0.6/building_tools-v1.0.6.zip).
+1. Download add-on (zipped) from this [link](https://github.com/ranjian0/building_tools/releases/download/v1.0.12/building_tools_v1.0.12.zip).
 2. In blender, go to : Edit -> Preferences -> Add-ons -> Install.
 3. Select the downloaded file and you're good to go.
 
 
 ## Features
 
-* Floorplans
-* Floors (slabs and walls)
-* Doors
-* Windows
-* Multigroup (door-window combinations)
-* Roof
-* Stairs
-* Balcony
-* Roads (with shoulder, sidewalks etc. supports both straight and curved extrusion)
+* [Floorplans](https://github.com/ranjian0/building_tools/wiki/Floorplan)
+* [Floors](https://github.com/ranjian0/building_tools/wiki/Floor)
+* [Doors](https://github.com/ranjian0/building_tools/wiki/Door)
+* [Windows](https://github.com/ranjian0/building_tools/wiki/Window)
+* [Multigroup](https://github.com/ranjian0/building_tools/wiki/Multigroup) (door-window combinations)
+* [Roof](https://github.com/ranjian0/building_tools/wiki/Roof)
+* [Stairs](https://github.com/ranjian0/building_tools/wiki/Stairs)
+* [Balcony](https://github.com/ranjian0/building_tools/wiki/Balcony)
 
 ## Status
 
-`Version` : `v1.0.6`
+`Version` : `v1.0.12`
+
+**Blender 4.0 Compatible** 
 
 ## Inspiration
 
@@ -71,6 +72,6 @@ Created by [ranjian0](https://github.com/ranjian0), [luckykadam](https://github.
 
 ## Support
 
-If you would like to support our work you can do so on our patreon page.
+If you would like to support our work you can do so through Paypal,
 
-[![Patreon](https://i.imgur.com/FOii5wr.png)](https://www.patreon.com/ranjian0)
+[![](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/donate?hosted_button_id=EX6AB8P8M9VZG)

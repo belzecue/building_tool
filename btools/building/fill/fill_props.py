@@ -1,9 +1,9 @@
 import bpy
 from bpy.props import IntProperty, FloatProperty, EnumProperty, PointerProperty
+from ...utils import get_scaled_unit
 
 
 class FillPanel(bpy.types.PropertyGroup):
-
     panel_count_x: IntProperty(
         name="Horizontal Panels",
         min=0,
@@ -22,18 +22,18 @@ class FillPanel(bpy.types.PropertyGroup):
 
     panel_border_size: FloatProperty(
         name="Panel Border",
-        min=0.01,
-        max=1.0,
-        default=0.1,
+        min=get_scaled_unit(0.01),
+        max=get_scaled_unit(1.0),
+        default=get_scaled_unit(0.1),
         unit="LENGTH",
         description="Border for panels",
     )
 
     panel_margin: FloatProperty(
         name="Panel Margin",
-        min=0.01,
-        max=1.0,
-        default=0.05,
+        min=get_scaled_unit(0.01),
+        max=get_scaled_unit(1.0),
+        default=get_scaled_unit(0.05),
         unit="LENGTH",
         description="Margins of each panel",
     )
@@ -41,9 +41,9 @@ class FillPanel(bpy.types.PropertyGroup):
     panel_depth: FloatProperty(
         name="Panel Depth",
         step=1,
-        min=0.01,
-        max=100.0,
-        default=0.01,
+        min=get_scaled_unit(0.01),
+        max=get_scaled_unit(100.0),
+        default=get_scaled_unit(0.01),
         unit="LENGTH",
         description="Depth of panels",
     )
@@ -79,25 +79,24 @@ class FillGlassPanes(bpy.types.PropertyGroup):
 
     pane_margin: FloatProperty(
         name="Glass Pane Margin",
-        min=0.01,
-        max=1.0,
-        default=0.1,
+        min=get_scaled_unit(0.01),
+        max=get_scaled_unit(1.0),
+        default=get_scaled_unit(0.1),
         unit="LENGTH",
         description="Margin of glass pane frames",
     )
 
     pane_depth: FloatProperty(
         name="Glass Pane Depth",
-        min=0.0,
-        max=0.1,
-        default=0.03,
+        min=get_scaled_unit(0.0),
+        max=get_scaled_unit(0.1),
+        default=get_scaled_unit(0.03),
         step=0.1,
         unit="LENGTH",
         description="Depth of glass panes",
     )
 
     def draw(self, box):
-
         col = box.column(align=True)
         row = col.row(align=True)
         row.prop(self, "pane_count_x")
@@ -118,9 +117,9 @@ class FillLouver(bpy.types.PropertyGroup):
     louver_margin: FloatProperty(
         name="Louver Margin",
         step=1,
-        min=0.001,
-        max=100.0,
-        default=0.1,
+        min=get_scaled_unit(0.001),
+        max=get_scaled_unit(100.0),
+        default=get_scaled_unit(0.1),
         unit="LENGTH",
         description="Offset of louvers from face border",
     )
@@ -128,9 +127,9 @@ class FillLouver(bpy.types.PropertyGroup):
     louver_depth: FloatProperty(
         name="Louver Depth",
         step=1,
-        min=0.01,
-        max=100.0,
-        default=0.05,
+        min=get_scaled_unit(0.01),
+        max=get_scaled_unit(100.0),
+        default=get_scaled_unit(0.05),
         unit="LENGTH",
         description="Depth of each louver",
     )
@@ -138,15 +137,14 @@ class FillLouver(bpy.types.PropertyGroup):
     louver_border: FloatProperty(
         name="Louver Border",
         step=1,
-        min=0.0,
-        max=1.0,
-        default=0.01,
+        min=get_scaled_unit(0.0),
+        max=get_scaled_unit(1.0),
+        default=get_scaled_unit(0.01),
         unit="LENGTH",
         description="Distance between louvers",
     )
 
     def draw(self, box):
-
         box.prop(self, "louver_margin")
 
         col = box.column(align=True)
@@ -174,25 +172,24 @@ class FillBars(bpy.types.PropertyGroup):
 
     bar_width: FloatProperty(
         name="Bar Width",
-        min=0.01,
-        max=100.0,
-        default=0.1,
+        min=get_scaled_unit(0.01),
+        max=get_scaled_unit(100.0),
+        default=get_scaled_unit(0.1),
         unit="LENGTH",
-        description="Width of bars"
+        description="Width of bars",
     )
 
     bar_depth: FloatProperty(
         name="Bar Depth",
         step=1,
-        min=0.01,
-        max=1.0,
-        default=0.04,
+        min=get_scaled_unit(0.01),
+        max=get_scaled_unit(1.0),
+        default=get_scaled_unit(0.04),
         unit="LENGTH",
         description="Depth of bars",
     )
 
     def draw(self, box):
-
         col = box.column(align=True)
         row = col.row(align=True)
         row.prop(self, "bar_count_x")

@@ -3,34 +3,32 @@ import btools
 import random
 import unittest
 
-floor = btools.building.floor
-floor_builder = floor.floor.Floor
+from btools.building.floor import FloorProperty
+from btools.building.floor.floor_ops import build as floor_builder
 
-floorplan = btools.building.floorplan
-floorplan_builder = floorplan.floorplan.Floorplan
-
+from btools.building.floorplan import FloorplanProperty
+from btools.building.floorplan.floorplan_ops import build as floorplan_builder
 
 class TestFloor(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
-        bpy.utils.register_class(floorplan.FloorplanProperty)
-        bpy.types.Scene.floorplan_prop = bpy.props.PointerProperty(type=floorplan.FloorplanProperty)
+        bpy.utils.register_class(FloorplanProperty)
+        bpy.types.Scene.floorplan_prop = bpy.props.PointerProperty(type=FloorplanProperty)
 
-        bpy.utils.register_class(floor.FloorProperty)
-        bpy.types.Scene.floor_prop = bpy.props.PointerProperty(type=floor.FloorProperty)
+        bpy.utils.register_class(FloorProperty)
+        bpy.types.Scene.floor_prop = bpy.props.PointerProperty(type=FloorProperty)
 
     @classmethod
     def tearDownClass(cls):
         del bpy.types.Scene.floor_prop
-        bpy.utils.unregister_class(floor.FloorProperty)
+        bpy.utils.unregister_class(FloorProperty)
 
         del bpy.types.Scene.floorplan_prop
-        bpy.utils.unregister_class(floorplan.FloorplanProperty)
+        bpy.utils.unregister_class(FloorplanProperty)
 
     def setUp(self):
         self.clear_objects()
-        self.defaults = btools.utils.kwargs_from_props(bpy.context.scene.floor_prop)
+        self.defaults = btools.utils.dict_from_prop(bpy.context.scene.floor_prop)
 
     def tearDown(self):
         # -- restore test_prop to previous state
@@ -48,7 +46,7 @@ class TestFloor(unittest.TestCase):
         # Build regular shapes
         for fp_type in ["RECTANGULAR", "CIRCULAR", "COMPOSITE"]:
             prop.type = fp_type
-            res = floorplan_builder.build(context, prop)
+            res = floorplan_builder(context, prop)
 
             # switch to edit mode
             bpy.ops.object.editmode_toggle()
@@ -65,7 +63,7 @@ class TestFloor(unittest.TestCase):
         prop.type = "RANDOM"
         for s in range(25):
             prop.seed = random.randrange(0, 10000)
-            res = floorplan_builder.build(context, prop)
+            res = floorplan_builder(context, prop)
 
             # switch to edit mode
             bpy.ops.object.editmode_toggle()
@@ -89,10 +87,6 @@ class TestFloor(unittest.TestCase):
                 floorplan_edges_count = len([e for e in bm.edges if e.is_boundary])
 
                 # build floor
-                floor_res = floor_builder.build(context, prop)
+                floor_res = floor_builder(context, prop)
                 self.assertEqual(floor_res, {"FINISHED"})
                 self.assertEqual(len(bm.faces), (floorplan_edges_count * 4) + 1)
-
-    def test_floors_multi_visual(self):
-        # --run some floor tests and save the blend file for visual confirmation
-        pass

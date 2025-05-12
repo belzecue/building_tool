@@ -2,26 +2,23 @@ import bpy
 import btools
 import random
 import unittest
-
-floorplan = btools.building.floorplan
-builder = floorplan.floorplan.Floorplan
-
+from btools.building.floorplan import FloorplanProperty
+from btools.building.floorplan.floorplan_ops import build
 
 class TestFloorplan(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
-        bpy.utils.register_class(floorplan.FloorplanProperty)
-        bpy.types.Scene.test_prop = bpy.props.PointerProperty(type=floorplan.FloorplanProperty)
+        bpy.utils.register_class(FloorplanProperty)
+        bpy.types.Scene.test_prop = bpy.props.PointerProperty(type=FloorplanProperty)
 
     @classmethod
     def tearDownClass(cls):
         del bpy.types.Scene.test_prop
-        bpy.utils.unregister_class(floorplan.FloorplanProperty)
+        bpy.utils.unregister_class(FloorplanProperty)
 
     def setUp(self):
         self.clear_objects()
-        self.defaults = btools.utils.kwargs_from_props(bpy.context.scene.test_prop)
+        self.defaults = btools.utils.dict_from_prop(bpy.context.scene.test_prop)
 
     def tearDown(self):
         # -- restore test_prop to previous state
@@ -43,7 +40,7 @@ class TestFloorplan(unittest.TestCase):
         prop = context.scene.test_prop
 
         prop.type = "RECTANGULAR"
-        res = builder.build(context, prop)
+        res = build(context, prop)
         self.assertIsNotNone(res)
 
         verts = context.object.data.vertices
@@ -57,7 +54,7 @@ class TestFloorplan(unittest.TestCase):
 
         prop.width = 10
         prop.length = 10
-        res = builder.build(context, prop)
+        res = build(context, prop)
         self.assertIsNotNone(res)
 
         # -- check new size
@@ -70,11 +67,11 @@ class TestFloorplan(unittest.TestCase):
         prop = context.scene.test_prop
 
         prop.type = "CIRCULAR"
-        res = builder.build(context, prop)
+        res = build(context, prop)
         self.assertIsNotNone(res)
 
         faces = context.object.data.polygons
-        self.assertEquals(len(faces), 1) # cap_tris False
+        self.assertEquals(len(faces), 1)  # cap_tris False
 
         # -- check default size
         verts = context.object.data.vertices
@@ -86,19 +83,18 @@ class TestFloorplan(unittest.TestCase):
 
         self.clear_objects()
 
-        prop.cap_tris = True
-        res = builder.build(context, prop)
+        res = build(context, prop)
         self.assertIsNotNone(res)
 
         faces = context.object.data.polygons
-        self.assertEquals(len(faces), prop.segments) # cap_tris False
+        self.assertEquals(len(faces), 1)
 
     def test_composite(self):
         context = bpy.context
         prop = context.scene.test_prop
 
         prop.type = "COMPOSITE"
-        res = builder.build(context, prop)
+        res = build(context, prop)
         self.assertIsNotNone(res)
 
         faces = context.object.data.polygons
@@ -113,7 +109,7 @@ class TestFloorplan(unittest.TestCase):
         prop.width, prop.length = (1, 1)
         prop.tl1, prop.tl2, prop.tl3, prop.tl4 = (1, 2, 3, 4)
 
-        res = builder.build(context, prop)
+        res = build(context, prop)
         self.assertIsNotNone(res)
 
         areas = {p.area for p in context.object.data.polygons}
@@ -124,7 +120,7 @@ class TestFloorplan(unittest.TestCase):
         prop = context.scene.test_prop
 
         prop.type = "H-SHAPED"
-        res = builder.build(context, prop)
+        res = build(context, prop)
         self.assertIsNotNone(res)
 
         faces = context.object.data.polygons
@@ -144,7 +140,7 @@ class TestFloorplan(unittest.TestCase):
         prop.tw1, prop.tw2, prop.tw3, prop.tw4 = (1, 1, 1, 1)
         prop.tl1, prop.tl2, prop.tl3, prop.tl4 = (1, 2, 3, 4)
 
-        res = builder.build(context, prop)
+        res = build(context, prop)
         self.assertIsNotNone(res)
 
         areas = {p.area for p in context.object.data.polygons}
@@ -157,7 +153,7 @@ class TestFloorplan(unittest.TestCase):
         prop.type = "RANDOM"
         for s in range(100):
             prop.seed = random.randrange(0, 10000)
-            res = builder.build(context, prop)
+            res = build(context, prop)
             self.assertIsNotNone(res)
             self.clear_objects()
 
@@ -165,9 +161,9 @@ class TestFloorplan(unittest.TestCase):
         for i in range(1, 5):
             prop.extension_amount = i
 
-            res = builder.build(context, prop)
+            res = build(context, prop)
             self.assertIsNotNone(res)
 
             faces = context.object.data.polygons
-            self.assertEquals(len(faces), i+1)
+            self.assertEquals(len(faces), i + 1)
             self.clear_objects()

@@ -4,14 +4,25 @@ from bpy.props import (
     BoolProperty,
     EnumProperty,
     FloatProperty,
-    PointerProperty
+    PointerProperty,
 )
 
+from ..arch import ArchProperty
+from ...utils import get_scaled_unit
+from ..array import ArrayProperty, ArrayGetSet
 from ..fill import FillBars, FillLouver, FillGlassPanes
-from ..generic import ArchProperty, SizeOffsetProperty, CountProperty
+from ..sizeoffset import SizeOffsetGetSet, SizeOffsetProperty
 
 
-class WindowProperty(bpy.types.PropertyGroup):
+class WindowProperty(bpy.types.PropertyGroup, ArrayGetSet, SizeOffsetGetSet):
+    arch: PointerProperty(type=ArchProperty)
+    array: PointerProperty(type=ArrayProperty)
+    size_offset: PointerProperty(type=SizeOffsetProperty)
+
+    bar_fill: PointerProperty(type=FillBars)
+    louver_fill: PointerProperty(type=FillLouver)
+    glass_fill: PointerProperty(type=FillGlassPanes)
+
     win_types = [
         ("CIRCULAR", "Circular", "", 0),
         ("RECTANGULAR", "Rectangular", "", 1),
@@ -26,27 +37,27 @@ class WindowProperty(bpy.types.PropertyGroup):
 
     frame_thickness: FloatProperty(
         name="Frame Thickness",
-        min=0.01,
-        max=1.0,
-        default=0.1,
+        min=get_scaled_unit(0.01),
+        max=get_scaled_unit(1.0),
+        default=get_scaled_unit(0.1),
         unit="LENGTH",
         description="Thickness of window Frame",
     )
 
     frame_depth: FloatProperty(
         name="Frame Depth",
-        min=-1.0,
-        max=1.0,
-        default=0.0,
+        min=get_scaled_unit(-1.0),
+        max=get_scaled_unit(1.0),
+        default=get_scaled_unit(0.0),
         unit="LENGTH",
         description="Depth of window Frame",
     )
 
     window_depth: FloatProperty(
         name="Window Depth",
-        min=0.0,
-        max=1.0,
-        default=0.05,
+        min=get_scaled_unit(0.0),
+        max=get_scaled_unit(1.0),
+        default=get_scaled_unit(0.05),
         unit="LENGTH",
         description="Depth of window",
     )
@@ -60,12 +71,8 @@ class WindowProperty(bpy.types.PropertyGroup):
     )
 
     add_arch: BoolProperty(
-        name="Add Arch", default=False, description="Add arch over door/window"
+        name="Add Arch", default=False, description="Add arch over window"
     )
-
-    count: CountProperty
-    arch: PointerProperty(type=ArchProperty)
-    size_offset: PointerProperty(type=SizeOffsetProperty)
 
     fill_types = [
         ("NONE", "None", "", 0),
@@ -80,18 +87,19 @@ class WindowProperty(bpy.types.PropertyGroup):
         description="Type of fill for window",
     )
 
-    bar_fill: PointerProperty(type=FillBars)
-    louver_fill: PointerProperty(type=FillLouver)
-    glass_fill: PointerProperty(type=FillGlassPanes)
-
     def init(self, wall_dimensions):
         self["wall_dimensions"] = wall_dimensions
         self.size_offset.init(
             (self["wall_dimensions"][0] / self.count, self["wall_dimensions"][1]),
             default_size=(1.0, 1.0),
             default_offset=(0.0, 0.0),
+            spread=self.array.spread,
         )
-        self.arch.init(wall_dimensions[1] / 2 - self.size_offset.offset.y - self.size_offset.size.y / 2)
+        self.arch.init(
+            wall_dimensions[1] / 2
+            - self.size_offset.offset.y
+            - self.size_offset.size.y / 2
+        )
 
     def draw(self, context, layout):
         box = layout.box()
@@ -110,8 +118,7 @@ class WindowProperty(bpy.types.PropertyGroup):
         row = col.row(align=True)
         row.prop(self, "window_depth")
 
-        col = box.column(align=True)
-        col.prop(self, "count")
+        self.array.draw(context, box)
 
         if self.type == "RECTANGULAR":
             box = layout.box()
